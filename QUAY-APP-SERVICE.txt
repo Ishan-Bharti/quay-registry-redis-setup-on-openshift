@@ -1,0 +1,151 @@
+NOTE: in this we can create the quay service by systemd when we can start the service my container is created by systemd service
+
+step1: go inside the given path 
+cd /etc/systemd/system
+touch quay-app.service
+vim quay-app.service
+
+[Unit]
+Description=Quay Container
+Wants=network.target
+After=network-online.target quay-pod.service quay-redis.service
+Requires=quay-pod.service quay-redis.service
+
+[Service]
+Type=simple
+TimeoutStartSec=5m
+Environment=PODMAN_SYSTEMD_UNIT=%n
+ExecStartPre=-/bin/rm -f %t/%n-pid %t/%n-cid
+ExecStart=/usr/bin/podman run \
+    --name quay-app \
+    -v /root/quay-install/quay-config:/quay-registry/conf/stack:Z \
+    -v sqlite-storage:/sqlite:Z \
+    -v quay-storage:/datastorage:Z \
+    --image-volume=ignore \
+    --pod=quay-pod \
+    --conmon-pidfile %t/%n-pid \
+    --cidfile %t/%n-cid \
+    --cgroups=no-conmon \
+    --log-driver=journald \
+    --replace \
+    -e WORKER_COUNT_UNSUPPORTED_MINIMUM=1 \
+    -e WORKER_COUNT=1 \
+    registry.redhat.io/quay/quay-rhel8:v3.12.12 registry
+
+ExecStop=-/usr/bin/podman stop --ignore --cidfile %t/%n-cid -t 10
+ExecStopPost=-/bin/sh -c 'if [ "$EXIT_STATUS" -eq 0  ]; then /usr/bin/podman rm --ignore -f --cidfile %t/%n-cid; fi'
+PIDFile=%t/%n-pid
+KillMode=none
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target default.target
+
+:wq!
+
+NOTE: ONE QUAY-APP SERVICE IS CREATED PLEASE GIVE THE FULL PERMSSION this file and check all the values carefully if any changes need to be change in file please change
+
+STEP2: NOW CREATE THE SECOND SERVICE quay-pod.service 
+
+cd /etc/systemd/system
+touch quay-pod.service
+vim quay-pod.service
+
+[Unit]
+Description=Infra Container for Quay
+Wants=network.target
+After=network-online.target
+Before=quay-redis.service
+
+[Service]
+Type=simple
+RemainAfterExit=yes
+TimeoutStartSec=5m
+ExecStartPre=-/bin/rm -f %t/%n-pid %t/%n-pod-id
+ExecStart=/usr/bin/podman pod create \
+    --name quay-pod \
+    --infra-image registry.access.redhat.com/ubi8/pause:8.10-5 \
+    --publish 8443:8443 \
+    --pod-id-file %t/%n-pod-id \
+    --replace
+ExecStop=-/usr/bin/podman pod stop --ignore --pod-id-file %t/%n-pod-id -t 10
+ExecStopPost=-/usr/bin/podman pod rm --ignore -f --pod-id-file %t/%n-pod-id
+PIDFile=%t/%n-pid
+KillMode=none
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target default.target
+
+:wq!
+
+NOTE: QUAY-POD SSERVICE IS CREATDE AND ALSO GIVE THE FULL PERMSSION TO THIS FILE AND CHECK IMAGE AS WELL YOU CAN GIVE IN SERVICE 
+
+SETP3: NOW CREATE THE THIRD SERVICE NAME quay-redis.service
+
+cd /etc/systemd/system
+touch quay-redis.service
+vim quay-redis.service
+
+[Unit]
+Description=Redis Podman Container for Quay
+Wants=network.target
+After=network-online.target quay-pod.service
+Requires=quay-pod.service
+
+[Service]
+Type=simple
+TimeoutStartSec=5m
+ExecStartPre=-/bin/rm -f %t/%n-pid %t/%n-cid
+ExecStart=/usr/bin/podman run \
+    --name quay-redis \
+    --pod=quay-pod \
+    --conmon-pidfile %t/%n-pid \
+    --cidfile %t/%n-cid \
+    --cgroups=no-conmon \
+    --image-volume=ignore \
+    --secret=redis_pass,type=env,target=REDIS_PASSWORD \
+    --replace \
+    registry.redhat.io/rhel8/redis-6:1-190
+
+ExecStop=-/usr/bin/podman stop --ignore --cidfile %t/%n-cid -t 10
+ExecStopPost=-/usr/bin/podman rm --ignore -f --cidfile %t/%n-cid
+PIDFile=%t/%n-pid
+KillMode=none
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target default.target
+
+:wq!
+
+NOTE: ALL THE THREE SERVICE WERE CREATED NOW TIME TO UP THE SERVICE ONE BY ONE 
+
+COMMAND TO RUN THE SERVICE IS 
+
+systemctl start quay-pod.service  
+systemctl enable quay-pod.service   ##run automatically on every reboot  
+systemctl status quay-pod.service   ##check the status service is running or not if running start the second one and also check any dependency on any service with each other or not
+
+systemctl start quay-redis.service
+systemctl enable quay-redis.service    ##run automatically on every reboot 
+systemctl status quay-redis.service    ##check the status service is running or not if running start the second one and also check any dependency on any service with each other or not
+
+systemctl start quay-app.service
+systemctl enable quay-app.service  ##run automatically on every reboot
+systemctl status quay-app.service   ##check the status service is running or not if running start the second one and also check any dependency on any service with each other or not
+
+NOTE: IF ALL THE SERVICE ARE RUNNINMG PROPER NEED TO CHECK THE PODMAN CONTAINER COMMAND GIVE BELOW
+
+podman ps  ##show running container if any container not show run the command podman ps -a  ##this command can show the exicted containers
+
+if all the container are running access the url and also dns entry shopuld be done on bank dns like bank dns ip and my quay registry url im my case ban dns and url given belw
+
+IP: 172.25.147.76
+URL: https://registryuat.ocpcbdcuat.psb.bank.in
+
+##if everthing is fine you can access your registry 
+
