@@ -1,0 +1,163 @@
+step1: on linux server podman binary is installed 
+commnand to verify: which podman see the podman path no need to run the podman service in this we can setup quay registry by systemd service
+
+set2: create one directory
+mkdir /root/quay-install
+ls -lrth 
+ste3: create tow more direct inside the quay-install folder 
+
+[root@DRSVRVDTBNOAPUT quay-install]# ls -lrth
+total 0
+drwxr-x---. 2 root root 60 Jan 21 12:09 quay-rootCA
+drwxr-x---. 2 root root 90 Jan 21 12:09 quay-config
+
+step4: go inside the quay-rootCA by 
+cd quay-rootCA
+ls -lrth 
+
+[root@DRSVRVDTBNOAPUT quay-rootCA]# ls -lrth
+total 12K
+-rw-------. 1 root root 1.7K Jan 21 12:09 rootCA.key
+-rw-r--r--. 1 root root 1.5K Jan 21 12:09 rootCA.pem
+-rw-r--r--. 1 root root   41 Jan 21 12:09 rootCA.srl    ##create these 3 certifoicate
+
+[root@DRSVRVDTBNOAPUT quay-rootCA]# cat rootCA.srl
+25223E140A9F33492294C54BD75E0BCD5ABA47D9
+
+step5: now come one step back and go inside the quay-config path 
+cd ../quay-config
+ls -lrth 
+[root@DRSVRVDTBNOAPUT quay-config]# ls -lrth
+total 20K
+-rwxr-x---. 1 root root 1.9K Jan 21 12:09 config.yaml
+-rw-r--r--. 1 root root  436 Jan 21 12:09 openssl.cnf
+-rw-r--r--. 1 root root 1.7K Jan 21 12:09 ssl.key
+-rw-r--r--. 1 root root  899 Jan 21 12:09 ssl.csr
+-rw-r--r--. 1 root root 2.8K Jan 21 12:09 ssl.cert    ##ypu seee 5 file there 
+
+step5: modify the file as per according 
+
+[root@DRSVRVDTBNOAPUT quay-config]# cat config.yaml
+AUTHENTICATION_TYPE: Database
+BUILDLOGS_REDIS:
+  host: localhost
+  password: cT2ffBUPqgPG639XgpkLW15T
+  port: 6379
+DATABASE_SECRET_KEY: fV1qbl45MFRKOUR0PSVrJFY5QEc0LGlccUlnN28/YUt2WV1wPCcob1leckB9W1gj
+DB_URI: sqlite:////sqlite/quay_sqlite.db
+DEFAULT_TAG_EXPIRATION: 2w
+DISTRIBUTED_STORAGE_DEFAULT_LOCATIONS: []
+DISTRIBUTED_STORAGE_PREFERENCE:
+  - default
+DISTRIBUTED_STORAGE_CONFIG:
+  default:
+    - LocalStorage
+    - storage_path: /datastorage
+ENTERPRISE_LOGO_URL: /static/img/quay-horizontal-color.svg
+FEATURE_ACI_CONVERSION: false
+FEATURE_ANONYMOUS_ACCESS: true
+FEATURE_APP_REGISTRY: false
+FEATURE_APP_SPECIFIC_TOKENS: true
+FEATURE_BUILD_SUPPORT: false
+FEATURE_CHANGE_TAG_EXPIRATION: true
+FEATURE_DIRECT_LOGIN: true
+FEATURE_PARTIAL_USER_AUTOCOMPLETE: true
+FEATURE_REPO_MIRROR: true
+FEATURE_MAILING: false
+FEATURE_REQUIRE_TEAM_INVITE: true
+FEATURE_RESTRICTED_V1_PUSH: true
+FEATURE_SECURITY_NOTIFICATIONS: true
+FEATURE_SECURITY_SCANNER: false
+FEATURE_USERNAME_CONFIRMATION: true
+FEATURE_USER_CREATION: true
+FEATURE_USER_LOG_ACCESS: true
+GITHUB_LOGIN_CONFIG: {}
+GITHUB_TRIGGER_CONFIG: {}
+GITLAB_TRIGGER_KIND: {}
+LOGS_MODEL: database
+LOGS_MODEL_CONFIG: {}
+LOG_ARCHIVE_LOCATION: default
+PREFERRED_URL_SCHEME: https
+REGISTRY_TITLE: Red Hat Quay
+REGISTRY_TITLE_SHORT: Red Hat Quay
+REPO_MIRROR_SERVER_HOSTNAME: null
+REPO_MIRROR_TLS_VERIFY: false
+SECRET_KEY: N3Z2Ni5HfFMiME9BRUsjcDlTZHE6PClrdVBVKTkhRWV5WnVEZC9ZVTFrMytZREkt
+SECURITY_SCANNER_ISSUER_NAME: security_scanner
+SERVER_HOSTNAME: registryuat.ocpcbdcuat.psb.bank.in:8443
+SETUP_COMPLETE: true
+SUPER_USERS:
+  - admin
+TAG_EXPIRATION_OPTIONS:
+  - 0s
+  - 1d
+  - 1w
+  - 2w
+  - 4w
+TEAM_RESYNC_STALE_TIME: 60m
+TESTING: false
+USERFILES_LOCATION: default
+USERFILES_PATH: userfiles/
+USER_EVENTS_REDIS:
+  host: localhost
+  password: cT2ffBUPqgPG639XgpkLW15T
+  port: 6379
+USE_CDN: false
+FEATURE_USER_INITIALIZE: true
+CREATE_NAMESPACE_ON_PUSH: true
+
+:wq!
+
+step6: also change below file as per according 
+
+[root@DRSVRVDTBNOAPUT quay-config]# cat openssl.cnf
+[req]
+default_bits = 4096
+default_md = sha256
+distinguished_name = req_distinguished_name
+x509_extensions = v3_req
+prompt = no
+[req_distinguished_name]
+C = US
+ST = VA
+L = New York
+O = Quay
+OU = Division
+CN = registryuat.ocpcbdcuat.psb.bank.in
+[v3_req]
+keyUsage = nonRepudiation, digitalSignature, keyEncipherment, keyCertSign
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names
+[alt_names]
+DNS = registryuat.ocpcbdcuat.psb.bank.in
+
+:wq!
+
+
+step7: create one more folder and in this folder store the image like given below
+mkdir /root/ocp4/mirror
+cd /root/ocp4/mirror
+
+[root@DRSVRVDTBNOAPUT mirror]# ls -lrth
+total 5.2G
+-rwxr-xr-x. 1 root  root   12M Nov 14 07:16 mirror-registry
+-rw-r--r--. 1 root  root  1.3G Nov 14 07:17 quay.tar
+-rw-r--r--. 1 root  root  449M Nov 14 07:17 redis.tar
+-rw-r--r--. 1 root  root  224M Nov 14 07:17 pause.tar
+-rw-r--r--. 1 root  root  306M Nov 14 07:17 execution-environment.tar
+-rw-r--r--. 1 root  root   98M Nov 14 07:17 sqlite3.tar
+-rw-r--r--. 1 root  root  2.0G Nov 14 07:17 image-archive.tar
+-rwxrwxrwx. 1 a2409 a2409 911M Jan 21 11:17 mirror-registry-amd64.tar.gz   ## make sure all the file are present in this path this is my images 
+
+NOte: one very the image by running the command
+
+[root@DRSVRVDTBNOAPUT mirror]# podman images
+REPOSITORY                             TAG         IMAGE ID      CREATED      SIZE
+registry.redhat.io/quay/quay-rhel8     v3.12.12    d5783a88f458  2 hours ago  1.35 GB
+registry.redhat.io/rhel8/redis-6       1-190       6e0599626afd  2 hours ago  471 MB
+registry.access.redhat.com/ubi8/pause  8.10-5      7dea1a74b6c8  2 hours ago  235 MB
+quay.io/quay/mirror-registry-ee        latest      160d002b9d2c  2 hours ago  320 MB    ###all the image are present there
+
+NOTE: HERE ALL THE SETUP PARTS ARE COMPLETE NOW CREATE THE SYSTEMD SERVIICE IN NEX FILE WE CAN WRITE THE QUAY SERVICE REDIS SERVICE CODE
+
+
