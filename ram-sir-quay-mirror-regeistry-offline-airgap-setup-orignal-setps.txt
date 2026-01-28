@@ -24,22 +24,22 @@ podman version
 ------------------------------------------------
 export OCP_RELEASE=4.18.1
 export ARCHITECTURE=x86_64        # ARM ke liye: aarch64
-export PULL_SECRET_PATH=/root/pull-secret.json
-export SAVE_DIR=/opt/ocp-images
+export PULL_SECRET_PATH=/root/pull-secret.json     ##lgon krna hao redhat account mai bhase milega yeah secret or ek file bna k usme  dal k rakh dena hai
+export SAVE_DIR=/opt/ocp-images                    ##yeah ek directory create krna hai
  
-mkdir -p $SAVE_DIR
+mkdir -p $SAVE_DIR                                 ##yeah ek directory create krna hai   jo variable se create hoga
  
  
 ------------------------------------------------
 3. Login to Red Hat Registry
 ------------------------------------------------
  
-Option 1: Podman login
+Option 1: Podman login                                 ##is se redhat registry mai login krna hai may bhi nhi ho kryuki ineternet nhi hai machine par
 podman login registry.redhat.io \
   -u <your_redhat_username> \
   -p <your_redhat_password>
  
-Option 2: Update pull-secret using oc (recommended)
+Option 2: Update pull-secret using oc (recommended)        ##is command se lkogin krna hai registry k andar using pull secret uske liye oc command system mai hini chahiye username and password dena hai redhat ka
 oc registry login \
   --registry=registry.redhat.io \
   --auth-basic=<your_redhat_username>:<your_redhat_password> \
@@ -47,10 +47,10 @@ oc registry login \
  
  
 ------------------------------------------------
-4. Mirror OpenShift Release Images (Local Directory)
+4. Mirror OpenShift Release Images (Local Directory)  ##jb yeah command run krogey to rehat k quay registry se image lakr jo directory create kri thi bha image clone kr dega image us path k ander dikegi nhi toh is link se quay.io/openshift-release-dev/ krk bhi system mai dal skty h
 ------------------------------------------------
  
-oc adm release mirror \
+oc adm release mirror \                                              
   -a ${PULL_SECRET_PATH} \
   --from=quay.io/openshift-release-dev/ocp-release:${OCP_RELEASE}-${ARCHITECTURE} \
   --to-dir=${SAVE_DIR}
@@ -64,7 +64,7 @@ NOTE:
 5. Verify Downloaded Content
 ------------------------------------------------
  
-ls ${SAVE_DIR}
+ls ${SAVE_DIR}                               ##is command se verify krna hia hai images dikh rhi hai ya nhi
  
 Expected:
 - release-manifests/
@@ -74,10 +74,10 @@ Expected:
  
  
 ------------------------------------------------
-6. Install Mirror Registry (Quay)
+6. Install Mirror Registry (Quay)                  ##apna registry username password or url yha dena hai
 ------------------------------------------------
  
-tar -xzf mirror-registry-amd64.tar.gz
+tar -xzf mirror-registry-amd64.tar.gz            ##yeah tar file console se milegi is isko system mai dal lena hai bastion server par lik mai deta hu https://mirror.openshift.com/pub/cgw/mirror-registry/latest/mirror-registry-amd64.tar.gz?ref=myopenshiftblog.com
  
 ./mirror-registry install \
   --quayHostname mirror.lab.ocp.lan \
@@ -93,7 +93,7 @@ mv execution-environment.tar /usr/bin/
  
  
 ------------------------------------------------
-8. Login to Mirror Registry
+8. Login to Mirror Registry              ##console par login krna hai or bha organization bnani name ocp4 and create or phir repository create krni name openshift4.18.1 and than create ab isme bastion se image push kregey 
 ------------------------------------------------
  
 Create base64 token:
@@ -118,7 +118,7 @@ update-ca-trust
 ------------------------------------------------
 10. Next Steps (Disconnected Install)
 ------------------------------------------------
-- Push mirrored images to registry
+- Push mirrored images to registry   command: oc adm release mirror -a ${PULL_SECRET_PATH} --from-dir=jha image hai --to-docker://https://registryuat-ocpcbdcuat.punjabandsind.bank.in:8443/ocp4/openshift4.18.1   is command se bho push kr dega images yha par 
 - Create ImageDigestMirrorSet (IDMS)
 - Update install-config.yaml
 - Proceed with OpenShift installation
@@ -130,4 +130,4 @@ END OF FILE
 
 #################################################################################################################################################################################
 
-pura xeplanation mai write krunga file mai yha par 
+pura xeplanation mai write krunga file mai yha par  uper maine command k samne diya or ab registry mai login kr lena hai podman login registry ka url or user password dal k
