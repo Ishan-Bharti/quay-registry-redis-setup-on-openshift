@@ -1,0 +1,133 @@
+##his is the file to setup mirror regirty on bastion server explain by ram sir in no internet cluster air gapped environment environment mai btya hai yout tube par video bhi hai
+
+===============================
+OpenShift Mirror Registry Setup
+(Disconnected / Bare Metal)
+===============================
+ 
+------------------------------------------------
+1. Prerequisites
+------------------------------------------------
+- RHEL / CentOS / Rocky Linux
+- Internet access (temporary)
+- oc CLI installed
+- podman installed
+- Valid Red Hat Pull Secret (pull-secret.json)
+ 
+Check:
+oc version
+podman version
+ 
+ 
+------------------------------------------------
+2. Set Environment Variables
+------------------------------------------------
+export OCP_RELEASE=4.18.1
+export ARCHITECTURE=x86_64        # ARM ke liye: aarch64
+export PULL_SECRET_PATH=/root/pull-secret.json
+export SAVE_DIR=/opt/ocp-images
+ 
+mkdir -p $SAVE_DIR
+ 
+ 
+------------------------------------------------
+3. Login to Red Hat Registry
+------------------------------------------------
+ 
+Option 1: Podman login
+podman login registry.redhat.io \
+  -u <your_redhat_username> \
+  -p <your_redhat_password>
+ 
+Option 2: Update pull-secret using oc (recommended)
+oc registry login \
+  --registry=registry.redhat.io \
+  --auth-basic=<your_redhat_username>:<your_redhat_password> \
+  --to=${PULL_SECRET_PATH}
+ 
+ 
+------------------------------------------------
+4. Mirror OpenShift Release Images (Local Directory)
+------------------------------------------------
+ 
+oc adm release mirror \
+  -a ${PULL_SECRET_PATH} \
+  --from=quay.io/openshift-release-dev/ocp-release:${OCP_RELEASE}-${ARCHITECTURE} \
+  --to-dir=${SAVE_DIR}
+ 
+NOTE:
+- icsp deprecated warning aana normal hai
+- Ye command poora OCP release download karegi
+ 
+ 
+------------------------------------------------
+5. Verify Downloaded Content
+------------------------------------------------
+ 
+ls ${SAVE_DIR}
+ 
+Expected:
+- release-manifests/
+- v2/
+- mapping.txt
+- imageContentSourcePolicy.yaml (or IDMS)
+ 
+ 
+------------------------------------------------
+6. Install Mirror Registry (Quay)
+------------------------------------------------
+ 
+tar -xzf mirror-registry-amd64.tar.gz
+ 
+./mirror-registry install \
+  --quayHostname mirror.lab.ocp.lan \
+  --initUser openshift \
+  --initPassword redhat123
+ 
+ 
+------------------------------------------------
+7. Move Execution Environment
+------------------------------------------------
+ 
+mv execution-environment.tar /usr/bin/
+ 
+ 
+------------------------------------------------
+8. Login to Mirror Registry
+------------------------------------------------
+ 
+Create base64 token:
+echo -n openshift:redhat123 | base64 -w0
+ 
+Login:
+podman login \
+  --authfile quay-secret.json \
+  -u openshift \
+  -p redhat123 \
+  https://mirror.ocp.lab.lan:8443
+ 
+ 
+------------------------------------------------
+9. Trust Mirror Registry CA
+------------------------------------------------
+ 
+cp rootCA.pem /etc/pki/ca-trust/source/anchors/
+update-ca-trust
+ 
+ 
+------------------------------------------------
+10. Next Steps (Disconnected Install)
+------------------------------------------------
+- Push mirrored images to registry
+- Create ImageDigestMirrorSet (IDMS)
+- Update install-config.yaml
+- Proceed with OpenShift installation
+ 
+===============================
+END OF FILE
+===============================
+
+
+#################################################################################################################################################################################
+
+pura xeplanation mai write krunga file mai yha par 
